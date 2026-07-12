@@ -26,38 +26,38 @@ import Toast from './components/Common/Toast';
 
 function App() {
   return (
-    // <ThemeProvider>
-    //   <AuthProvider>
-    //     <CartProvider>
-    //       <NotificationProvider>
-    //         <Router>
-    //           <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-    //             <Header />
+    <ThemeProvider>
+      <AuthProvider>
+        <CartProvider>
+          <NotificationProvider>
+            <Router>
+              <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+                <Header />
 
-    //             <main style={{ flex: 1 }}>
-    //               <Routes>
-    //                 <Route path="/" element={<Home />} />
-    //                 <Route path="/category/:id" element={<Category />} />
-    //                 <Route path="/product/:id" element={<Product />} />
-    //                 <Route path="/cart" element={<Cart />} />
-    //                 <Route path="/checkout" element={<Checkout />} />
-    //                 <Route path="/pc-builder" element={<PCBuilder />} />
-    //                 <Route path="/dashboard" element={<Dashboard />} />
-    //                 <Route path="/login" element={<Login />} />
-    //                 <Route path="/register" element={<Register />} />
-    //                 <Route path="*" element={<NotFound />} />
-    //               </Routes>
-    //             </main>
+                <main style={{ flex: 1 }}>
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/category/:id" element={<Category />} />
+                    <Route path="/product/:id" element={<Product />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/pc-builder" element={<PCBuilder />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </main>
 
-    //             <Footer />
-    //             <Toast />
-    //           </div>
-    //         </Router>
-    //       </NotificationProvider>
-    //     </CartProvider>
-    //   </AuthProvider>
-    // </ThemeProvider>
-     <h1>StarTech Working</h1>
+                <Footer />
+                <Toast />
+              </div>
+            </Router>
+          </NotificationProvider>
+        </CartProvider>
+      </AuthProvider>
+    </ThemeProvider>
+
   );
 }
 
