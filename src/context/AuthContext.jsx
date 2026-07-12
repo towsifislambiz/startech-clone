@@ -8,20 +8,23 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // Restore user from token on mount
-    if (token) {
-      try {
-        const storedUser = localStorage.getItem('startech-user');
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-      } catch (err) {
-        console.error('Error restoring user:', err);
-        logout();
+useEffect(() => {
+  if (token) {
+    try {
+      const storedUser = localStorage.getItem('startech-user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
+    } catch (err) {
+      console.error('Error restoring user:', err);
+
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('startech-token');
+      localStorage.removeItem('startech-user');
     }
-  }, []);
+  }
+}, [token]);
 
   const login = async (email, password) => {
     setLoading(true);
