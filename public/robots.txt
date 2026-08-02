@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Allow: /category/
+Allow: /product/
+Allow: /brand/
+Allow: /brands
+Allow: /pc-builder
+Allow: /cart
+Allow: /comparison
+Allow: /search
+
+Disallow: /account/
+Disallow: /dashboard
+Disallow: /seller/
+Disallow: /seller-dashboard
+Disallow: /admin/
+Disallow: /admin-dashboard
+Disallow: /checkout
+Disallow: /order-confirmation/
+
+Sitemap: https://startech-clone.web.app/sitemap.xml

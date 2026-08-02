@@ -1,188 +1,492 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
-import { useNotification } from '../context/NotificationContext';
+import React, { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { FiChevronRight, FiCheckCircle, FiArrowRight, FiArrowLeft, FiTruck, FiShoppingBag } from 'react-icons/fi';
+import useCheckout from '../hooks/useCheckout';
+import CheckoutProgress from '../components/Checkout/CheckoutProgress';
+import AddressForm from '../components/Checkout/AddressForm';
+import PaymentMethods from '../components/Checkout/PaymentMethods';
+import CartSummaryCard from '../components/Cart/CartSummaryCard';
 
 const Checkout = () => {
-  const navigate = useNavigate();
-  const { success } = useNotification();
-  const { total, clearCart } = useCart();
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    fullName: '',
-    phone: '',
-    address: '',
-    city: '',
-    paymentMethod: 'sslcommerz'
-  });
+  const {
+    currentStep,
+    customer,
+    shippingAddress,
+    billingAddress,
+    sameAsShipping,
+    paymentMethod,
+    paymentDetails,
+    isSubmitting,
+    items,
+    totals,
+    shippingRegion,
+    nextStep,
+    prevStep,
+    goToStep,
+    updateCustomer,
+    updateShipping,
+    updateBilling,
+    setSameShipping,
+    updatePaymentMethod,
+    updatePaymentDetails,
+    submitOrder
+  } = useCheckout();
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  useEffect(() => {
+    document.title = 'Secure Checkout | StarTech';
+  }, []);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (step < 4) {
-      setStep(step + 1);
-    } else {
-      // Complete order
-      success('Order placed successfully!');
-      clearCart();
-      navigate('/dashboard?tab=orders');
-    }
-  };
+  if (items.length === 0) {
+    return (
+      <div className="container" style={{ padding: '80px 20px', textAlign: 'center' }}>
+        <div
+          style={{
+            width: '96px',
+            height: '96px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(213, 30, 11, 0.1)',
+            color: '#D51E0B',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px auto',
+            boxShadow: '0 0 40px rgba(213, 30, 11, 0.15)'
+          }}
+        >
+          <FiShoppingBag size={48} />
+        </div>
+        <h2 style={{ color: 'var(--text-primary, #ffffff)', fontSize: '24px', fontWeight: '800', marginBottom: '10px' }}>
+          Your Cart is Empty
+        </h2>
+        <p style={{ color: 'var(--text-secondary, #94a3b8)', marginBottom: '28px', maxWidth: '440px', margin: '0 auto 28px auto' }}>
+          You need at least one product in your shopping cart before proceeding to checkout.
+        </p>
+        <Link
+          to="/category/component"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '14px 28px',
+            backgroundColor: '#D51E0B',
+            color: '#ffffff',
+            fontWeight: '800',
+            fontSize: '15px',
+            borderRadius: '12px',
+            textDecoration: 'none',
+            boxShadow: '0 8px 24px rgba(213, 30, 11, 0.35)'
+          }}
+        >
+          Explore Tech Products
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="container" style={{ padding: '40px 0' }}>
-      <h1 style={{ marginBottom: '30px' }}>Checkout</h1>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '30px' }}>
-        <div>
-          {/* Progress Steps */}
-          <div style={{ display: 'flex', marginBottom: '30px', gap: '10px' }}>
-            {[1, 2, 3, 4].map((s) => (
-              <div key={s} style={{
-                flex: 1,
-                padding: '15px',
-                backgroundColor: step >= s ? 'var(--accent-red)' : 'var(--bg-secondary)',
-                color: step >= s ? 'var(--white)' : 'var(--text-primary)',
-                borderRadius: '6px',
-                textAlign: 'center',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }} onClick={() => setStep(s)}>
-                Step {s}
-              </div>
-            ))}
-          </div>
-
-          {/* Step 1: Shipping */}
-          {step === 1 && (
-            <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '30px', borderRadius: '8px', marginBottom: '20px' }}>
-              <h3 style={{ marginBottom: '20px' }}>Shipping Address</h3>
-              <form>
-                <input
-                  type="text"
-                  name="fullName"
-                  placeholder="Full Name"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  style={{ width: '100%', marginBottom: '15px', padding: '10px', border: '1px solid var(--border-color)', borderRadius: '6px' }}
-                />
-                <input
-                  type="tel"
-                  name="phone"
-                  placeholder="Phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  style={{ width: '100%', marginBottom: '15px', padding: '10px', border: '1px solid var(--border-color)', borderRadius: '6px' }}
-                />
-                <input
-                  type="text"
-                  name="address"
-                  placeholder="Address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  style={{ width: '100%', marginBottom: '15px', padding: '10px', border: '1px solid var(--border-color)', borderRadius: '6px' }}
-                />
-                <input
-                  type="text"
-                  name="city"
-                  placeholder="City"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                  style={{ width: '100%', marginBottom: '15px', padding: '10px', border: '1px solid var(--border-color)', borderRadius: '6px' }}
-                />
-              </form>
-            </div>
-          )}
-
-          {/* Step 2: Shipping Method */}
-          {step === 2 && (
-            <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '30px', borderRadius: '8px', marginBottom: '20px' }}>
-              <h3 style={{ marginBottom: '20px' }}>Shipping Method</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <label style={{ padding: '15px', backgroundColor: 'var(--bg)', border: '2px solid var(--accent-red)', borderRadius: '6px', cursor: 'pointer' }}>
-                  <input type="radio" name="shipping" defaultChecked /> Standard (3-5 days) - Free
-                </label>
-                <label style={{ padding: '15px', backgroundColor: 'var(--bg)', border: '2px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer' }}>
-                  <input type="radio" name="shipping" /> Express (1-2 days) - 250 TK
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Payment */}
-          {step === 3 && (
-            <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '30px', borderRadius: '8px', marginBottom: '20px' }}>
-              <h3 style={{ marginBottom: '20px' }}>Payment Method</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <label style={{ padding: '15px', backgroundColor: 'var(--bg)', border: '2px solid var(--accent-red)', borderRadius: '6px', cursor: 'pointer' }}>
-                  <input type="radio" name="payment" value="sslcommerz" checked={formData.paymentMethod === 'sslcommerz'} onChange={handleInputChange} /> SSLCommerz Card Payment
-                </label>
-                <label style={{ padding: '15px', backgroundColor: 'var(--bg)', border: '2px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer' }}>
-                  <input type="radio" name="payment" value="bkash" onChange={handleInputChange} /> bKash
-                </label>
-                <label style={{ padding: '15px', backgroundColor: 'var(--bg)', border: '2px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer' }}>
-                  <input type="radio" name="payment" value="nagad" onChange={handleInputChange} /> Nagad
-                </label>
-                <label style={{ padding: '15px', backgroundColor: 'var(--bg)', border: '2px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer' }}>
-                  <input type="radio" name="payment" value="cod" onChange={handleInputChange} /> Cash on Delivery
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Review */}
-          {step === 4 && (
-            <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '30px', borderRadius: '8px', marginBottom: '20px' }}>
-              <h3 style={{ marginBottom: '20px' }}>Order Review</h3>
-              <div style={{ backgroundColor: 'var(--bg)', padding: '15px', borderRadius: '6px', marginBottom: '20px' }}>
-                <p><strong>Name:</strong> {formData.fullName}</p>
-                <p><strong>Phone:</strong> {formData.phone}</p>
-                <p><strong>Address:</strong> {formData.address}, {formData.city}</p>
-                <p><strong>Payment:</strong> {formData.paymentMethod.toUpperCase()}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Navigation Buttons */}
-          <div style={{ display: 'flex', gap: '15px' }}>
-            {step > 1 && (
-              <button
-                onClick={() => setStep(step - 1)}
-                className="btn btn-secondary"
-                style={{ padding: '12px 30px' }}
-              >
-                Back
-              </button>
-            )}
-            <button
-              onClick={handleSubmit}
-              className="btn btn-primary"
-              style={{ padding: '12px 30px', marginLeft: 'auto' }}
-            >
-              {step === 4 ? 'Place Order' : 'Continue'}
-            </button>
-          </div>
+    <div className="cat" style={{ paddingBottom: '80px' }}>
+      {/* Breadcrumb Header */}
+      <div className="cat-breadcrumb">
+        <div className="container" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+          <Link to="/" style={{ color: 'var(--text-secondary, #94a3b8)', textDecoration: 'none' }}>Home</Link>
+          <FiChevronRight size={14} style={{ color: 'var(--text-muted, #64748b)' }} />
+          <Link to="/cart" style={{ color: 'var(--text-secondary, #94a3b8)', textDecoration: 'none' }}>Cart</Link>
+          <FiChevronRight size={14} style={{ color: 'var(--text-muted, #64748b)' }} />
+          <span style={{ color: '#D51E0B', fontWeight: '600' }}>Secure Checkout</span>
         </div>
+      </div>
 
-        {/* Order Summary Sidebar */}
-        <div style={{
-          backgroundColor: 'var(--bg-secondary)',
-          padding: '20px',
-          borderRadius: '8px',
-          height: 'fit-content',
-          position: 'sticky',
-          top: '100px'
-        }}>
-          <h3 style={{ marginBottom: '20px' }}>Order Summary</h3>
-          <div style={{ marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)' }}>
-            <span>3 Items in Cart</span>
+      <div className="container">
+        {/* Step Progress Bar */}
+        <CheckoutProgress currentStep={currentStep} onStepClick={goToStep} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', alignItems: 'start' }}>
+          {/* Main Multi-Step Form */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Step 1: Customer Information */}
+            {currentStep === 1 && (
+              <div
+                style={{
+                  backgroundColor: 'var(--bg-secondary, #0c1c28)',
+                  border: '1px solid var(--border-color, rgba(255,255,255,0.08))',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '20px',
+                  boxShadow: '0 10px 24px rgba(0,0,0,0.12)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#D51E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px' }}>
+                    1
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary, #ffffff)', margin: 0 }}>
+                    Customer Contact Information
+                  </h3>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-secondary, #94a3b8)', display: 'block', marginBottom: '6px' }}>First Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Tanvir"
+                      value={customer.firstName}
+                      onChange={(e) => updateCustomer({ firstName: e.target.value })}
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color, rgba(255,255,255,0.15))', backgroundColor: 'var(--bg, #081621)', color: 'var(--text-primary, #ffffff)', fontSize: '14px', outline: 'none' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-secondary, #94a3b8)', display: 'block', marginBottom: '6px' }}>Last Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ahmed"
+                      value={customer.lastName}
+                      onChange={(e) => updateCustomer({ lastName: e.target.value })}
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color, rgba(255,255,255,0.15))', backgroundColor: 'var(--bg, #081621)', color: 'var(--text-primary, #ffffff)', fontSize: '14px', outline: 'none' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-secondary, #94a3b8)', display: 'block', marginBottom: '6px' }}>Email Address *</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. user@example.com"
+                      value={customer.email}
+                      onChange={(e) => updateCustomer({ email: e.target.value })}
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color, rgba(255,255,255,0.15))', backgroundColor: 'var(--bg, #081621)', color: 'var(--text-primary, #ffffff)', fontSize: '14px', outline: 'none' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-secondary, #94a3b8)', display: 'block', marginBottom: '6px' }}>Phone Number *</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="e.g. 01712345678"
+                      value={customer.phone}
+                      onChange={(e) => updateCustomer({ phone: e.target.value })}
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color, rgba(255,255,255,0.15))', backgroundColor: 'var(--bg, #081621)', color: 'var(--text-primary, #ffffff)', fontSize: '14px', outline: 'none' }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  style={{
+                    alignSelf: 'flex-end',
+                    marginTop: '8px',
+                    padding: '12px 24px',
+                    backgroundColor: '#D51E0B',
+                    color: '#ffffff',
+                    fontWeight: '800',
+                    fontSize: '14.5px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    boxShadow: '0 6px 20px rgba(213, 30, 11, 0.3)'
+                  }}
+                >
+                  Next: Shipping Address <FiArrowRight size={18} />
+                </button>
+              </div>
+            )}
+
+            {/* Step 2: Shipping & Billing Address */}
+            {currentStep === 2 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <AddressForm
+                  title="Shipping Address"
+                  addressData={shippingAddress}
+                  onChange={updateShipping}
+                  showSameAsShipping={true}
+                  sameAsShipping={sameAsShipping}
+                  onToggleSame={setSameShipping}
+                />
+
+                {!sameAsShipping && (
+                  <AddressForm
+                    title="Billing Address"
+                    addressData={billingAddress}
+                    onChange={updateBilling}
+                  />
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    style={{
+                      padding: '12px 20px',
+                      backgroundColor: 'transparent',
+                      color: 'var(--text-primary, #ffffff)',
+                      border: '1px solid var(--border-color, rgba(255,255,255,0.2))',
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FiArrowLeft size={18} /> Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: '#D51E0B',
+                      color: '#ffffff',
+                      fontWeight: '800',
+                      fontSize: '14.5px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      boxShadow: '0 6px 20px rgba(213, 30, 11, 0.3)'
+                    }}
+                  >
+                    Next: Delivery Method <FiArrowRight size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Delivery Method */}
+            {currentStep === 3 && (
+              <div
+                style={{
+                  backgroundColor: 'var(--bg-secondary, #0c1c28)',
+                  border: '1px solid var(--border-color, rgba(255,255,255,0.08))',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '20px',
+                  boxShadow: '0 10px 24px rgba(0,0,0,0.12)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#D51E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px' }}>
+                    3
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary, #ffffff)', margin: 0 }}>
+                    Select Delivery Method
+                  </h3>
+                </div>
+
+                <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'var(--bg, #081621)', border: '2px solid #D51E0B', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <FiTruck size={24} style={{ color: '#D51E0B' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14.5px', fontWeight: '800', color: 'var(--text-primary, #ffffff)' }}>Express Nationwide Home Delivery</div>
+                    <div style={{ fontSize: '12.5px', color: 'var(--text-secondary, #94a3b8)', marginTop: '2px' }}>Delivered directly to your door within 2–4 business days with live SMS tracking.</div>
+                  </div>
+                  <strong style={{ color: 'var(--text-primary, #ffffff)', fontSize: '16px' }}>৳{totals.shippingFee}</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    style={{
+                      padding: '12px 20px',
+                      backgroundColor: 'transparent',
+                      color: 'var(--text-primary, #ffffff)',
+                      border: '1px solid var(--border-color, rgba(255,255,255,0.2))',
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FiArrowLeft size={18} /> Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: '#D51E0B',
+                      color: '#ffffff',
+                      fontWeight: '800',
+                      fontSize: '14.5px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      boxShadow: '0 6px 20px rgba(213, 30, 11, 0.3)'
+                    }}
+                  >
+                    Next: Payment Options <FiArrowRight size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Payment Methods */}
+            {currentStep === 4 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <PaymentMethods
+                  selectedMethod={paymentMethod}
+                  paymentDetails={paymentDetails}
+                  onSelectMethod={updatePaymentMethod}
+                  onUpdateDetails={updatePaymentDetails}
+                />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    style={{
+                      padding: '12px 20px',
+                      backgroundColor: 'transparent',
+                      color: 'var(--text-primary, #ffffff)',
+                      border: '1px solid var(--border-color, rgba(255,255,255,0.2))',
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FiArrowLeft size={18} /> Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: '#D51E0B',
+                      color: '#ffffff',
+                      fontWeight: '800',
+                      fontSize: '14.5px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      boxShadow: '0 6px 20px rgba(213, 30, 11, 0.3)'
+                    }}
+                  >
+                    Next: Review Order <FiArrowRight size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Order Review & Final Submit */}
+            {currentStep === 5 && (
+              <div
+                style={{
+                  backgroundColor: 'var(--bg-secondary, #0c1c28)',
+                  border: '1px solid var(--border-color, rgba(255,255,255,0.08))',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '20px',
+                  boxShadow: '0 10px 24px rgba(0,0,0,0.12)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#22c55e', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px' }}>
+                    ✓
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary, #ffffff)', margin: 0 }}>
+                    5. Final Order Review
+                  </h3>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {items.map((item) => (
+                    <div key={item.id} style={{ display: 'flex', gap: '14px', alignItems: 'center', padding: '12px', backgroundColor: 'var(--bg, #081621)', borderRadius: '10px', border: '1px solid var(--border-color, rgba(255,255,255,0.08))' }}>
+                      <img src={item.thumbnail || item.images[0]} alt={item.name} style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary, #ffffff)' }}>{item.name}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary, #94a3b8)' }}>Quantity: {item.quantity} × ৳{item.price.toLocaleString('en-IN')}</div>
+                      </div>
+                      <div style={{ fontSize: '15px', fontWeight: '800', color: '#D51E0B' }}>
+                        ৳{(item.price * item.quantity).toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '14px', borderTop: '1px solid var(--border-color, rgba(255,255,255,0.08))' }}>
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    style={{
+                      padding: '12px 20px',
+                      backgroundColor: 'transparent',
+                      color: 'var(--text-primary, #ffffff)',
+                      border: '1px solid var(--border-color, rgba(255,255,255,0.2))',
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FiArrowLeft size={18} /> Back
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={submitOrder}
+                    disabled={isSubmitting}
+                    style={{
+                      padding: '16px 32px',
+                      backgroundColor: '#D51E0B',
+                      color: '#ffffff',
+                      fontWeight: '800',
+                      fontSize: '16px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      boxShadow: '0 8px 24px rgba(213, 30, 11, 0.4)'
+                    }}
+                  >
+                    {isSubmitting ? 'Processing Order...' : <><FiCheckCircle size={20} /> Confirm & Place Order</>}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--accent-red)' }}>
-            {total.toLocaleString()} TK
+
+          {/* Right Column: Sticky Order Summary Sidebar */}
+          <div style={{ position: 'sticky', top: '90px' }}>
+            <CartSummaryCard
+              totals={totals}
+              shippingRegion={shippingRegion}
+              onSelectShipping={() => {}}
+              onProceedToCheckout={currentStep === 5 ? submitOrder : nextStep}
+            />
           </div>
         </div>
       </div>

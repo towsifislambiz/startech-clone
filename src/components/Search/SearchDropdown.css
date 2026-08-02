@@ -1,0 +1,339 @@
+/* Search Dropdown Autocomplete Menu */
+.search-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background-color: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--border-radius-md, 12px);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(15, 23, 42, 0.08);
+  z-index: 99999;
+  overflow: hidden;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+  outline: none;
+  animation: searchDropFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes searchDropFade {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.search-drop-loading {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+.search-drop-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(213, 30, 11, 0.2);
+  border-top-color: var(--accent-red, #D51E0B);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.search-drop-section {
+  padding: 14px 16px;
+  overflow-y: auto;
+}
+
+.search-drop-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--accent-red, #D51E0B);
+  margin-bottom: 10px;
+}
+
+.search-drop-empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: var(--text-secondary, #64748b);
+  font-size: 14px;
+}
+
+.search-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.search-item-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: var(--border-radius, 10px);
+  cursor: pointer;
+  background-color: transparent;
+  transition: all 0.18s ease;
+  border: 1px solid transparent;
+}
+
+.search-item-card:hover,
+.search-item-card.active-hover {
+  background-color: rgba(213, 30, 11, 0.08);
+  border-color: rgba(213, 30, 11, 0.2);
+}
+
+.search-item-img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.04);
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.search-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-item-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.search-item-brand {
+  color: var(--accent-red, #D51E0B);
+}
+
+.search-item-cat {
+  color: var(--text-secondary, #64748b);
+}
+
+.search-item-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-item-price-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+.search-item-price {
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+}
+
+.search-item-old-price {
+  color: var(--text-muted, #94a3b8);
+  text-decoration: line-through;
+  font-size: 11px;
+}
+
+.search-item-disc {
+  background-color: var(--accent-red, #D51E0B);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.search-item-arrow {
+  color: var(--text-muted, #94a3b8);
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.search-item-card:hover .search-item-arrow {
+  color: var(--accent-red, #D51E0B);
+  transform: translateX(3px);
+}
+
+.search-drop-suggestions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+.search-drop-sub-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 8px;
+}
+
+.search-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.search-chip-btn {
+  background-color: var(--bg, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  color: var(--text-primary, #0f172a);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.search-chip-btn:hover {
+  border-color: var(--accent-red, #D51E0B);
+  color: var(--accent-red, #D51E0B);
+  background-color: rgba(213, 30, 11, 0.05);
+}
+
+.search-drop-idle {
+  padding: 18px;
+}
+
+.search-drop-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.search-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+}
+
+.search-clear-all {
+  background: none;
+  border: none;
+  color: var(--accent-red, #D51E0B);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.search-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.search-recent-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-primary, #0f172a);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.search-recent-row:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.search-recent-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  font-weight: 500;
+}
+
+.search-recent-del {
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.search-recent-del:hover {
+  color: #ef4444;
+}
+
+.search-drop-footer {
+  padding: 14px 18px;
+  background-color: rgba(213, 30, 11, 0.06);
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13.5px;
+  color: var(--accent-red, #D51E0B);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.search-drop-footer:hover {
+  background-color: rgba(213, 30, 11, 0.12);
+}
+
+/* Dark Mode Overrides */
+html.dark-mode .search-dropdown-menu,
+body.dark-mode .search-dropdown-menu {
+  background-color: #0c1c28;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+}
+
+html.dark-mode .search-item-img,
+body.dark-mode .search-item-img {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+html.dark-mode .search-item-title,
+html.dark-mode .search-item-price,
+html.dark-mode .search-chip-btn,
+html.dark-mode .search-recent-row,
+body.dark-mode .search-item-title,
+body.dark-mode .search-item-price,
+body.dark-mode .search-chip-btn,
+body.dark-mode .search-recent-row {
+  color: #ffffff;
+}
+
+html.dark-mode .search-chip-btn,
+body.dark-mode .search-chip-btn {
+  background-color: #081621;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+html.dark-mode .search-recent-row:hover,
+body.dark-mode .search-recent-row:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+html.dark-mode .search-drop-footer,
+body.dark-mode .search-drop-footer {
+  background-color: rgba(213, 30, 11, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.1);
+}

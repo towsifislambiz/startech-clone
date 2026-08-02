@@ -55,10 +55,19 @@ export const NotificationProvider = ({ children }) => {
     [addNotification]
   );
 
+  // showNotification(message, type) — convenience alias used by all hooks/pages
+  const showNotification = useCallback(
+    (message, type = 'info', duration = 3000) => {
+      return addNotification(type, message, duration);
+    },
+    [addNotification]
+  );
+
   const value = {
     notifications,
     addNotification,
     removeNotification,
+    showNotification,
     success,
     error,
     warning,
