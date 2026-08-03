@@ -3,20 +3,26 @@ import { Navigate, useLocation, Outlet } from 'react-router-dom';
 import useAuthState from '../hooks/useAuthState';
 import AuthLoader from '../components/AuthLoader';
 
+const AUTHORIZED_SUPER_ADMIN_EMAIL = 'towsifislam33@gmail.com';
+
 const AdminRoute = ({ children }) => {
-  const { isAuthenticated, loading, role } = useAuthState();
+  const { user, isAuthenticated, loading, role } = useAuthState();
   const location = useLocation();
 
   if (loading) {
     return <AuthLoader message="Verifying Administrator privileges..." />;
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+  // Strict email check: Only towsifislam33@gmail.com is granted access
+  const userEmail = user?.email?.toLowerCase();
+  const isSuperAdmin =
+    isAuthenticated &&
+    (role === 'Admin' || userEmail === AUTHORIZED_SUPER_ADMIN_EMAIL.toLowerCase()) &&
+    userEmail === AUTHORIZED_SUPER_ADMIN_EMAIL.toLowerCase();
 
-  if (role !== 'Admin') {
-    return <Navigate to="/unauthorized" state={{ requiredRole: 'Admin', currentRole: role }} replace />;
+  if (!isSuperAdmin) {
+    console.warn(`[SECURITY_ALERT] Unauthorized access attempt to ${location.pathname} by email: ${userEmail || 'Guest'}`);
+    return <Navigate to="/404" replace />;
   }
 
   return children ? children : <Outlet />;

@@ -7,24 +7,26 @@ const GuestRoute = ({ children }) => {
   const { isAuthenticated, loading, role } = useAuthState();
   const location = useLocation();
 
-  if (loading) {
+  console.log('[GUEST_ROUTE] Evaluated:', { pathname: location.pathname, loading, isAuthenticated, role });
+
+  // Do not unmount guest pages during background auth sync if not authenticated
+  if (loading && isAuthenticated) {
     return <AuthLoader message="Loading account session..." />;
   }
 
   if (isAuthenticated) {
-    // 1. If user arrived with a target redirect location in state, preserve it
+    console.log('[GUEST_ROUTE] Authenticated user detected -> Redirecting away from guest route');
     const fromLocation = location.state?.from?.pathname;
     if (fromLocation) {
       return <Navigate to={fromLocation} replace />;
     }
 
-    // 2. Otherwise redirect based on role
     if (role === 'Admin') {
       return <Navigate to="/admin-dashboard" replace />;
     } else if (role === 'Seller') {
       return <Navigate to="/seller-dashboard" replace />;
     } else {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to="/profile" replace />;
     }
   }
 

@@ -3,10 +3,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   auth,
   db,
+  googleProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInWithPopup,
+  sendEmailVerification,
   signOut,
   onAuthStateChanged,
+  updateProfile,
   doc,
   getDoc,
   setDoc,
@@ -22,7 +26,45 @@ import {
 } from '../store/authSlice';
 import { mergeGuestCart } from '../store/cartSlice';
 
+const SUPER_ADMIN_EMAIL = 'towsifislam33@gmail.com';
+
 const AuthContext = createContext();
+
+export const getFirebaseErrorMessage = (error) => {
+  if (!error) return 'An error occurred. Please try again.';
+  const code = error.code || error;
+
+  switch (code) {
+    case 'auth/email-already-in-use':
+      return 'This email is already registered.';
+    case 'auth/invalid-email':
+      return 'The email address entered is invalid.';
+    case 'auth/weak-password':
+      return 'Your password is too weak. Please choose at least 6 characters.';
+    case 'auth/user-not-found':
+      return 'No account found with this email address.';
+    case 'auth/wrong-password':
+      return 'Incorrect password. Please verify and try again.';
+    case 'auth/invalid-credential':
+      return 'Invalid email or password. Please check your credentials.';
+    case 'auth/network-request-failed':
+      return 'Network connection error. Please check your internet connection.';
+    case 'auth/too-many-requests':
+      return 'Too many failed login attempts. Access blocked temporarily.';
+    case 'auth/user-disabled':
+      return 'This user account has been disabled by an administrator.';
+    case 'auth/popup-closed-by-user':
+      return 'Sign-in popup was closed before completing authentication.';
+    case 'auth/popup-blocked':
+      return 'Sign-in popup was blocked by your browser. Please allow popups for this website.';
+    case 'auth/account-exists-with-different-credential':
+      return 'An account already exists with this email address under a different sign-in method.';
+    case 'auth/cancelled-popup-request':
+      return 'Sign-in popup request was cancelled.';
+    default:
+      return error.message || 'Authentication failed. Please check your information.';
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const dispatch = useDispatch();
@@ -32,16 +74,20 @@ export const AuthProvider = ({ children }) => {
   const [role, setRole] = useState(reduxAuth.role || 'Customer');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState(null);
 
-  // Sync Firestore document and role for a given user UID
+  // Sync Firestore document and role for a verified Firebase user
   const syncUserDocAndRole = useCallback(async (firebaseUser, customRole) => {
-    if (!firebaseUser) return null;
+    if (!firebaseUser || !firebaseUser.uid) return null;
 
     try {
+      console.log('[SYNC_USER_DOC] Syncing Firestore user doc for UID:', firebaseUser.uid);
       const userRef = doc(db, 'users', firebaseUser.uid);
       const userSnap = await getDoc(userRef);
 
-      let userRole = customRole || 'Customer';
+      const isSuperAdmin = firebaseUser.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+      let userRole = isSuperAdmin ? 'Admin' : (customRole || 'Customer');
+
       let userData = {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
@@ -49,38 +95,30 @@ export const AuthProvider = ({ children }) => {
         photoURL: firebaseUser.photoURL || '',
         role: userRole,
         status: 'active',
+        emailVerified: firebaseUser.emailVerified,
         lastLogin: new Date().toISOString()
       };
 
       if (userSnap.exists()) {
         const existingData = userSnap.data();
-        userRole = existingData.role || userRole;
+        userRole = isSuperAdmin ? 'Admin' : (existingData.role || userRole);
         userData = {
           ...existingData,
           ...userData,
           role: userRole
         };
-        // Update last login timestamp in Firestore
-        updateDoc(userRef, { lastLogin: serverTimestamp() }).catch(() => {});
+        updateDoc(userRef, { lastLogin: serverTimestamp(), role: userRole, emailVerified: firebaseUser.emailVerified }).catch(() => {});
       } else {
-        // Create initial document in Firestore
         await setDoc(userRef, {
           ...userData,
           createdAt: serverTimestamp(),
           lastLogin: serverTimestamp()
-        }).catch((err) => {
-          console.warn('Firestore setDoc notice (operating in mock fallback mode):', err);
         });
       }
-
-      // Cache role locally
-      localStorage.setItem('startech-user-role', userRole);
-      localStorage.setItem('startech-user', JSON.stringify(userData));
 
       dispatch(setRoleState(userRole));
       dispatch(setAuthUser(userData));
 
-      // Trigger Guest Cart Merge upon login
       try {
         const savedGuestCart = localStorage.getItem('startech-cart');
         if (savedGuestCart) {
@@ -95,174 +133,259 @@ export const AuthProvider = ({ children }) => {
       setRole(userRole);
       return userData;
     } catch (err) {
-      console.warn('Sync user doc error, falling back to local session:', err);
-      const fallbackRole = customRole || localStorage.getItem('startech-user-role') || 'Customer';
-      const fallbackUser = {
-        uid: firebaseUser.uid || 'usr_' + Date.now(),
+      console.error('[SYNC_USER_DOC_ERROR]:', err.message);
+      const isSuperAdmin = firebaseUser.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+      const authenticUser = {
+        uid: firebaseUser.uid,
         email: firebaseUser.email,
         displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-        role: fallbackRole,
-        status: 'active'
+        role: isSuperAdmin ? 'Admin' : (customRole || 'Customer'),
+        status: 'active',
+        emailVerified: firebaseUser.emailVerified
       };
 
-      dispatch(setRoleState(fallbackRole));
-      dispatch(setAuthUser(fallbackUser));
-      setUser(fallbackUser);
-      setRole(fallbackRole);
-      return fallbackUser;
+      dispatch(setRoleState(authenticUser.role));
+      dispatch(setAuthUser(authenticUser));
+      setUser(authenticUser);
+      setRole(authenticUser.role);
+      return authenticUser;
     }
   }, [dispatch]);
 
-  // Firebase Auth State Listener & Refresh Persistence
+  // Strict Firebase Auth State Listener (Requires emailVerified = true)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true);
-      dispatch(setReduxLoading(true));
+      console.log('[ON_AUTH_STATE_CHANGED] Event Fired:', {
+        uid: firebaseUser?.uid,
+        email: firebaseUser?.email,
+        emailVerified: firebaseUser?.emailVerified
+      });
 
-      if (firebaseUser) {
+      if (firebaseUser && firebaseUser.emailVerified) {
+        setLoading(true);
+        dispatch(setReduxLoading(true));
         await syncUserDocAndRole(firebaseUser);
+        setLoading(false);
+        dispatch(setReduxLoading(false));
       } else {
-        // Check if mock user was stored in localStorage
-        const storedUser = localStorage.getItem('startech-user');
-        const storedRole = localStorage.getItem('startech-user-role') || 'Customer';
-
-        if (storedUser) {
-          try {
-            const parsed = JSON.parse(storedUser);
-            setUser(parsed);
-            setRole(parsed.role || storedRole);
-            dispatch(setAuthUser(parsed));
-          } catch (e) {
-            setUser(null);
-            setRole('Customer');
-            dispatch(logoutUser());
-          }
-        } else {
-          setUser(null);
-          setRole('Customer');
-          dispatch(logoutUser());
-        }
+        setUser(null);
+        setRole('Customer');
+        dispatch(logoutUser());
+        setLoading(false);
+        dispatch(setReduxLoading(false));
       }
-
-      setLoading(false);
-      dispatch(setReduxLoading(false));
     });
 
     return () => unsubscribe();
   }, [dispatch, syncUserDocAndRole]);
 
-  // Multi-tab synchronization and Network status event listeners
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'startech-user' || e.key === 'startech-user-role') {
-        if (!e.newValue) {
-          // Logged out in another tab
-          setUser(null);
-          setRole('Customer');
-          dispatch(logoutUser());
-        } else {
-          try {
-            const parsed = JSON.parse(e.newValue);
-            setUser(parsed);
-            if (parsed.role) {
-              setRole(parsed.role);
-              dispatch(setRoleState(parsed.role));
-            }
-          } catch (err) {}
-        }
-      }
-    };
-
-    const handleOnline = () => {
-      if (auth.currentUser) {
-        syncUserDocAndRole(auth.currentUser);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('online', handleOnline);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('online', handleOnline);
-    };
-  }, [dispatch, syncUserDocAndRole]);
-
-  // Login handler with role support
-  const login = async (email, password, desiredRole = null) => {
+  // Google Authentication Handler
+  const loginWithGoogle = async (chosenRole = 'Customer') => {
+    console.log('[GOOGLE_AUTH_START] Opening Google Auth popup...');
     setLoading(true);
     setError(null);
     dispatch(setReduxLoading(true));
 
     try {
-      let firebaseUser = null;
+      const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+      console.log('[GOOGLE_AUTH_SUCCESS] Firebase Google Credential Received:', {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL
+      });
+
+      const isSuperAdmin = firebaseUser.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+      let userRole = isSuperAdmin ? 'Admin' : (chosenRole || 'Customer');
+
+      const userRef = doc(db, 'users', firebaseUser.uid);
+      const userSnap = await getDoc(userRef);
+
+      let userData = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Google User',
+        photoURL: firebaseUser.photoURL || '',
+        role: userRole,
+        status: 'active',
+        emailVerified: true,
+        lastLogin: new Date().toISOString()
+      };
+
+      if (userSnap.exists()) {
+        const existingData = userSnap.data();
+        userRole = isSuperAdmin ? 'Admin' : (existingData.role || userRole);
+        userData = {
+          ...existingData,
+          ...userData,
+          role: userRole
+        };
+        await updateDoc(userRef, { lastLogin: serverTimestamp(), role: userRole }).catch(() => {});
+      } else {
+        await setDoc(userRef, {
+          ...userData,
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp()
+        }).catch((err) => console.warn('Firestore setDoc notice:', err));
+      }
+
+      dispatch(setRoleState(userRole));
+      dispatch(setAuthUser(userData));
+      setUser(userData);
+      setRole(userRole);
+
+      setLoading(false);
+      dispatch(setReduxLoading(false));
+
+      return { success: true, user: userData };
+    } catch (err) {
+      console.error('[GOOGLE_AUTH_ERROR]:', err.code, err.message);
+      const errMsg = getFirebaseErrorMessage(err);
+      setError(errMsg);
+      dispatch(setReduxError(errMsg));
+      setLoading(false);
+      dispatch(setReduxLoading(false));
+      return { success: false, error: errMsg };
+    }
+  };
+
+  // Registration Flow (Email/Password)
+  const register = async (userData, chosenRole = 'Customer') => {
+    console.log("REGISTER FUNCTION STARTED");
+    setLoading(true);
+    setError(null);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+      const firebaseUser = userCredential.user;
+
+      const fullName = userData.full_name || `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.email.split('@')[0];
+
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        firebaseUser = userCredential.user;
-      } catch (fbErr) {
-        // Mock fallback for test environment
-        console.warn('Firebase login notice, operating with test credentials:', fbErr.message);
-        firebaseUser = {
-          uid: 'uid_' + email.replace(/[^a-zA-Z0-9]/g, '_'),
+        await updateProfile(firebaseUser, { displayName: fullName });
+      } catch (pErr) {}
+
+      const isSuperAdmin = userData.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+      const finalRole = isSuperAdmin ? 'Admin' : (chosenRole || 'Customer');
+
+      try {
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        await setDoc(userRef, {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: fullName,
+          photoURL: '',
+          role: finalRole,
+          status: 'active',
+          emailVerified: false,
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp()
+        });
+      } catch (fsErr) {}
+
+      try {
+        await sendEmailVerification(firebaseUser);
+      } catch (evErr) {}
+
+      try {
+        await signOut(auth);
+      } catch (soErr) {}
+
+      setUser(null);
+      setRole('Customer');
+      dispatch(logoutUser());
+
+      setLoading(false);
+      dispatch(setReduxLoading(false));
+
+      return { success: true };
+    } catch (err) {
+      console.error("register() caught error:", err.code, err.message);
+      const errMsg = getFirebaseErrorMessage(err);
+      setError(errMsg);
+      dispatch(setReduxError(errMsg));
+      setLoading(false);
+      dispatch(setReduxLoading(false));
+      return { success: false, error: errMsg };
+    }
+  };
+
+  // Login Flow with user.reload() & emailVerified Check
+  const login = async (email, password, desiredRole = null) => {
+    console.log('[LOGIN_START] Email:', email);
+    setLoading(true);
+    setError(null);
+    setUnverifiedEmail(null);
+    dispatch(setReduxLoading(true));
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+
+      try {
+        await firebaseUser.reload();
+      } catch (rErr) {}
+
+      if (!firebaseUser.emailVerified) {
+        await signOut(auth);
+        setUser(null);
+        dispatch(logoutUser());
+
+        const errMsg = 'Please verify your email before logging in.';
+        setError(errMsg);
+        setUnverifiedEmail(email);
+        dispatch(setReduxError(errMsg));
+        setLoading(false);
+        dispatch(setReduxLoading(false));
+
+        return {
+          success: false,
+          requiresVerification: true,
           email: email,
-          displayName: email.split('@')[0]
+          error: errMsg
         };
       }
 
-      // Role resolution: desiredRole > email rule > default 'Customer'
-      let assignedRole = desiredRole;
-      if (!assignedRole) {
-        if (email.includes('admin')) assignedRole = 'Admin';
-        else if (email.includes('seller')) assignedRole = 'Seller';
-        else assignedRole = 'Customer';
-      }
+      const isSuperAdmin = email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+      let assignedRole = isSuperAdmin ? 'Admin' : (desiredRole || 'Customer');
 
       const syncedUser = await syncUserDocAndRole(firebaseUser, assignedRole);
       setLoading(false);
       dispatch(setReduxLoading(false));
-      return !!syncedUser;
+      return { success: true, user: syncedUser };
     } catch (err) {
-      const errMsg = err.message || 'Login failed. Please check credentials.';
+      console.error('[LOGIN_ERROR]:', err.code, err.message);
+      const errMsg = getFirebaseErrorMessage(err);
       setError(errMsg);
       dispatch(setReduxError(errMsg));
       setLoading(false);
-      return false;
+      dispatch(setReduxLoading(false));
+      return { success: false, error: errMsg };
     }
   };
 
-  // Register handler (Default role is always Customer)
-  const register = async (userData, chosenRole = 'Customer') => {
-    setLoading(true);
-    setError(null);
-    dispatch(setReduxLoading(true));
-
+  // Resend Verification Email Function
+  const resendVerificationEmail = async (email, password) => {
     try {
-      let firebaseUser = null;
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
-        firebaseUser = userCredential.user;
-      } catch (fbErr) {
-        console.warn('Firebase register notice, operating with test credentials:', fbErr.message);
-        firebaseUser = {
-          uid: 'uid_' + Date.now(),
-          email: userData.email,
-          displayName: userData.full_name || `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.email.split('@')[0]
-        };
+      if (email && password) {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(userCredential.user);
+        await signOut(auth);
+        setUser(null);
+        dispatch(logoutUser());
+        return { success: true };
+      } else if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+        await signOut(auth);
+        setUser(null);
+        dispatch(logoutUser());
+        return { success: true };
+      } else {
+        return { success: false, error: 'Please enter your email and password to resend the verification link.' };
       }
-
-      // Default role is ALWAYS Customer unless chosen
-      const finalRole = chosenRole || 'Customer';
-      const createdUser = await syncUserDocAndRole(firebaseUser, finalRole);
-
-      setLoading(false);
-      dispatch(setReduxLoading(false));
-      return !!createdUser;
     } catch (err) {
-      const errMsg = err.message || 'Registration failed.';
-      setError(errMsg);
-      dispatch(setReduxError(errMsg));
-      setLoading(false);
-      return false;
+      return { success: false, error: getFirebaseErrorMessage(err) };
     }
   };
 
@@ -279,12 +402,15 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     role,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && user.emailVerified === true,
     loading,
     error,
+    unverifiedEmail,
     login,
+    loginWithGoogle,
     register,
     logout,
+    resendVerificationEmail,
     syncUserDocAndRole
   };
 

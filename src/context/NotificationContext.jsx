@@ -55,7 +55,10 @@ export const NotificationProvider = ({ children }) => {
     [addNotification]
   );
 
-  // showNotification(message, type) — convenience alias used by all hooks/pages
+  // Convenience aliases used across pages and components
+  const showSuccess = success;
+  const showError = error;
+
   const showNotification = useCallback(
     (message, type = 'info', duration = 3000) => {
       return addNotification(type, message, duration);
@@ -69,7 +72,9 @@ export const NotificationProvider = ({ children }) => {
     removeNotification,
     showNotification,
     success,
+    showSuccess,
     error,
+    showError,
     warning,
     info,
   };

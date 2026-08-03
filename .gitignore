@@ -1,4 +1,33 @@
+# Dependencies
 node_modules/
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Production Build
+/build
+/dist
+
+# Environment variables & secrets (NEVER commit to GitHub)
 .env
-dist/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+.env.development
+
+# Editor & System Files
 .vscode/
+.idea/
+*.suo
+*.ntvsload
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
